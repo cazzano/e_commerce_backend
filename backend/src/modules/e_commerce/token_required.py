@@ -1,6 +1,12 @@
-from flask import Flask
+from flask import Flask,jsonify,request
 from functools import wraps
+import jwt
 import os
+import sqlite3
+
+
+JWT_SECRET_KEY = 'your-secret-key-change-this-in-production'  # Should match auth_app.py
+PRODUCTS_DATABASE = 'products.db'
 
 def token_required(f):
     """Decorator to require JWT token for protected routes"""

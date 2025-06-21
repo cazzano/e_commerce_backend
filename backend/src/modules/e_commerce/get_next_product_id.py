@@ -1,5 +1,8 @@
 from flask import Flask
 import os
+import sqlite3
+
+PRODUCTS_DATABASE = 'products.db'
 
 def get_next_product_id():
     """Generate the next product ID in format Pxxx"""

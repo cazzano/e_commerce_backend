@@ -6,7 +6,6 @@ from modules.e_commerce.get_next_product_id import get_next_product_id
 
 # Configuration
 PRODUCTS_DATABASE = 'products.db'
-JWT_SECRET_KEY = 'your-secret-key-change-this-in-production'  # Should match auth_app.py
 
 products_api = Blueprint('products_api', __name__)
 

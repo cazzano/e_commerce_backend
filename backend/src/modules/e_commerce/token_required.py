@@ -4,7 +4,7 @@ import jwt
 
 
 JWT_SECRET_KEY = 'your-secret-key-change-this-in-production'  # Should match auth_app.py
-PRODUCTS_DATABASE = 'products.db'
+
 
 def token_required(f):
     """Decorator to require JWT token for protected routes"""

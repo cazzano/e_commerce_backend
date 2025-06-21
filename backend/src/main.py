@@ -1,6 +1,5 @@
 from flask import Flask
 from apis.e_commerce.products_api import products_api
-import os
 
 def create_app():
     """Create and configure the Flask application"""

@@ -1,8 +1,6 @@
-from flask import Flask,jsonify,request
+from flask import jsonify,request
 from functools import wraps
 import jwt
-import os
-import sqlite3
 
 
 JWT_SECRET_KEY = 'your-secret-key-change-this-in-production'  # Should match auth_app.py

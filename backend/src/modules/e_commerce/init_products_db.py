@@ -1,5 +1,4 @@
-from flask import Flask
-import os
+
 import sqlite3
 
 PRODUCTS_DATABASE = 'products.db'

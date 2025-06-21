@@ -1,9 +1,5 @@
-from flask import Flask, request, jsonify, Blueprint
+from flask import request, jsonify, Blueprint
 import sqlite3
-import jwt
-from functools import wraps
-import os
-from datetime import datetime
 from modules.e_commerce.token_required import token_required
 from modules.e_commerce.init_products_db import init_products_db
 from modules.e_commerce.get_next_product_id import get_next_product_id

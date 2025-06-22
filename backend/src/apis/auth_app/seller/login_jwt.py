@@ -4,9 +4,6 @@ from datetime import datetime, timedelta
 from modules.auth_app.verify_user_credentials_by_username import verify_user_credentials_by_username
 
 # Configuration
-CHAT_DATABASE = 'chat.db'
-USER_API_URL = 'http://localhost:5000'  # User registration API URL
-AUTH_API_URL = 'http://localhost:3000'  # Authentication API URL
 JWT_SECRET_KEY = 'your-secret-key-change-this-in-production'  # Should match auth_app.py
 
 

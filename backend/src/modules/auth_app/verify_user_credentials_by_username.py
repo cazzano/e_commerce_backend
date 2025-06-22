@@ -5,12 +5,6 @@ from werkzeug.security import check_password_hash
 
 
 
-# Configuration
-CHAT_DATABASE = 'chat.db'
-USER_API_URL = 'http://localhost:5000'  # User registration API URL
-AUTH_API_URL = 'http://localhost:3000'  # Authentication API URL
-JWT_SECRET_KEY = 'your-secret-key-change-this-in-production'  # Should match auth_app.py
-
 def verify_user_credentials_by_username(username, password):
     """Verify user credentials by username and return user_id if successful"""
     try:

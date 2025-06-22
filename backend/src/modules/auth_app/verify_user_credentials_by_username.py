@@ -1,10 +1,8 @@
-from flask import Flask, request, jsonify, Blueprint
+from flask import request, jsonify
 import sqlite3
-import requests
-import jwt
-from functools import wraps
+
 from werkzeug.security import check_password_hash
-from datetime import datetime, timedelta
+
 
 
 # Configuration

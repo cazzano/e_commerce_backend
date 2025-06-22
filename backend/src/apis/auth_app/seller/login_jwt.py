@@ -1,9 +1,5 @@
-from flask import Flask, request, jsonify, Blueprint
-import sqlite3
-import requests
+from flask import jsonify, Blueprint,request
 import jwt
-from functools import wraps
-from werkzeug.security import check_password_hash
 from datetime import datetime, timedelta
 from modules.auth_app.verify_user_credentials_by_username import verify_user_credentials_by_username
 

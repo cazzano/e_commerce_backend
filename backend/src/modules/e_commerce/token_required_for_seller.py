@@ -3,7 +3,7 @@ from functools import wraps
 import jwt
 
 
-JWT_SECRET_KEY = 'your-secret-key-change-this-in-production'  # Should match auth_app.py
+JWT_SECRET_KEY = 'DMFGHO#$&*I)@#IUDSJIFGUI)SDR)*&#$&#@$^SDFGY@()!&@*DJSGF)#$&*#^'  # Should match auth_app.py
 
 
 def token_required(f):

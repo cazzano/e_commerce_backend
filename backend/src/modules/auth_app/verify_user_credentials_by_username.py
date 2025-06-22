@@ -8,7 +8,7 @@ def verify_user_credentials_by_username(username, password):
     """Verify user credentials by username and return user_id if successful"""
     try:
         # Try different possible paths for the users database
-        possible_paths = ['users.db', '../users.db', './users.db']
+        possible_paths = ['sellers.db', '../sellers.db', './sellers.db']
         user_conn = None
 
         for path in possible_paths:

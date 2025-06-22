@@ -2,6 +2,7 @@ from flask import Flask
 from apis.e_commerce.add_products import products_api
 from apis.auth_app.seller.login_jwt import login_jwt
 from apis.registration.signup import signup_login
+from modules.registration.seller.init_db import init_db
 
 def create_app():
     """Create and configure the Flask application"""
@@ -16,7 +17,7 @@ def create_app():
 
 if __name__ == '__main__':
     app = create_app()
-    
+    init_db()
     # Run the application
     print("🚀 Starting Products API Server...")
     print("📍 Endpoints available:")

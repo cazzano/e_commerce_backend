@@ -1,11 +1,11 @@
 from flask import request, jsonify,Blueprint
 import sqlite3
 from werkzeug.security import generate_password_hash
-from modules.registration.automatically_make_user_id import get_next_user_id
+from modules.registration.seller.automatically_make_user_id import get_next_user_id
 
 
 # Database configuration
-DATABASE = 'users.db'
+DATABASE = 'sellers.db'
 
 
 signup_login=Blueprint('signup_login',__name__)

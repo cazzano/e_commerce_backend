@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 from modules.auth_app.verify_user_credentials_by_username import verify_user_credentials_by_username
 
 # Configuration
-JWT_SECRET_KEY = 'your-secret-key-change-this-in-production'  # Should match auth_app.py
+JWT_SECRET_KEY = 'DMFGHO#$&*I)@#IUDSJIFGUI)SDR)*&#$&#@$^SDFGY@()!&@*DJSGF)#$&*#^'  # Should match auth_app.py
 
 
 login_jwt = Blueprint('login_jwt', __name__)

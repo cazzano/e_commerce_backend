@@ -1,5 +1,6 @@
 from flask import Flask
-from apis.e_commerce.products_api import products_api
+from apis.e_commerce.add_products import products_api
+from apis.auth_app.seller.login_jwt import login_jwt
 
 def create_app():
     """Create and configure the Flask application"""
@@ -7,6 +8,7 @@ def create_app():
     
     # Register the products API blueprint
     app.register_blueprint(products_api)
+    app.register_blueprint(login_jwt)
     
     return app
 

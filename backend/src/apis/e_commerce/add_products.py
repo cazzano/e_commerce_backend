@@ -1,6 +1,6 @@
 from flask import request, jsonify, Blueprint
 import sqlite3
-from modules.e_commerce.token_required import token_required
+from modules.e_commerce.token_required_for_seller import token_required
 from modules.e_commerce.init_products_db import init_products_db
 from modules.e_commerce.get_next_product_id import get_next_product_id
 

@@ -1,9 +1,7 @@
-from flask import Flask, request, jsonify,Blueprint
+from flask import request, jsonify,Blueprint
 import sqlite3
-import os
 from werkzeug.security import generate_password_hash
 from modules.registration.automatically_make_user_id import get_next_user_id
-from modules.registration.init_db import init_db
 
 
 # Database configuration

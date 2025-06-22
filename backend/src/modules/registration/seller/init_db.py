@@ -2,7 +2,7 @@ import sqlite3
 # Database configuration
 DATABASE = 'sellers.db'
 
-def init_db():
+def init_db_seller():
     """Initialize the database with users table"""
     conn = sqlite3.connect(DATABASE)
     cursor = conn.cursor()

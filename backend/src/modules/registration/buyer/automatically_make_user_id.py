@@ -1,7 +1,7 @@
 import sqlite3
 
 # Database configuration
-DATABASE = 'users.db'
+DATABASE = 'buyers.db'
 
 def get_next_user_id():
     """Generate the next user ID in format Uxx"""

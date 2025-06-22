@@ -8,10 +8,10 @@ from modules.registration.seller.automatically_make_user_id import get_next_user
 DATABASE = 'sellers.db'
 
 
-signup_login=Blueprint('signup_login',__name__)
+signup_login_seller=Blueprint('signup_login_seller',__name__)
 
 
-@signup_login.route('/register', methods=['POST'])
+@signup_login_seller.route('/register/seller', methods=['POST'])
 def register_user():
     """Register a new user with username and password from headers"""
     try:

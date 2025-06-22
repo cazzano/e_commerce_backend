@@ -3,7 +3,7 @@ import sqlite3
 
 
 # Database configuration
-DATABASE = 'users.db'
+DATABASE = 'sellers.db'
 
 get_specific_user=Blueprint('get_specific_user',__name__)
 

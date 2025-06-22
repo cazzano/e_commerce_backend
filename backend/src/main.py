@@ -1,8 +1,11 @@
 from flask import Flask
 from apis.e_commerce.add_products import products_api
-from apis.auth_app.seller.login_jwt import login_jwt
-from apis.registration.signup import signup_login
-from modules.registration.seller.init_db import init_db
+from apis.auth_app.seller.login_jwt import login_jwt_seller
+from apis.auth_app.buyer.login_jwt import login_jwt_buyer
+from apis.registration.seller.signup import signup_login_seller
+from apis.registration.buyer.signup import signup_login_buyer
+from modules.registration.seller.init_db import init_db_seller
+from modules.registration.buyer.init_db import init_db_buyer
 
 def create_app():
     """Create and configure the Flask application"""
@@ -10,14 +13,17 @@ def create_app():
     
     # Register the products API blueprint
     app.register_blueprint(products_api)
-    app.register_blueprint(login_jwt)
-    app.register_blueprint(signup_login)
+    app.register_blueprint(login_jwt_seller)
+    app.register_blueprint(login_jwt_buyer)
+    app.register_blueprint(signup_login_seller)
+    app.register_blueprint(signup_login_buyer)
     
     return app
 
 if __name__ == '__main__':
     app = create_app()
-    init_db()
+    init_db_seller()
+    init_db_buyer()
     # Run the application
     print("🚀 Starting Products API Server...")
     print("📍 Endpoints available:")

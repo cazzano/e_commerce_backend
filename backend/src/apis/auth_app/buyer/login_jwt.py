@@ -1,15 +1,15 @@
 from flask import jsonify, Blueprint,request
 import jwt
 from datetime import datetime, timedelta
-from modules.auth_app.seller.verify_user_credentials_by_username import verify_user_credentials_by_username
+from modules.auth_app.buyer.verify_user_credentials_by_username import verify_user_credentials_by_username
 
 # Configuration
-JWT_SECRET_KEY = 'DMFGHO#$&*I)@#IUDSJIFGUI)SDR)*&#$&#@$^SDFGY@()!&@*DJSGF)#$&*#^'  # Should match auth_app.py
+JWT_SECRET_KEY = 'djfghjkoUK)#$&*^#$&dhfgdjh*@&##&*$dhfgdO&*@#)&@#_dpFJKDGPRUK384#)*&$%^#dkjf3784512SDF'  # Should match auth_app.py
 
 
-login_jwt_seller = Blueprint('login_jwt_seller', __name__)
+login_jwt_buyer = Blueprint('login_jwt_buyer', __name__)
 
-@login_jwt_seller.route('/login/seller', methods=['POST'])
+@login_jwt_buyer.route('/login/buyer', methods=['POST'])
 def login():
     """Login endpoint to authenticate user with username and get JWT token"""
     try:

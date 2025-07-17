@@ -1,18 +1,12 @@
 from flask import Blueprint, request, jsonify
 import sqlite3
-import os
 from modules.e_commerce.authentication_decorator import token_required
-from modules.e_commerce.validation import validate_product_data
-from modules.e_commerce.init_db import init_db
 
 # Create blueprint
-products_bp = Blueprint('products', __name__)
-
-
-
+get_products_bp = Blueprint('get_products', __name__)
 
 # Get all products endpoint
-@products_bp.route('/products', methods=['GET'])
+@get_products_bp.route('/products', methods=['GET'])
 @token_required
 def get_all_products():
     """Get all products from the database with optional filtering"""
@@ -111,7 +105,7 @@ def get_all_products():
         }), 500
 
 # Get single product by ID
-@products_bp.route('/products/<int:product_id>', methods=['GET'])
+@get_products_bp.route('/products/<int:product_id>', methods=['GET'])
 @token_required
 def get_product_by_id(product_id):
     """Get a specific product by its ID"""

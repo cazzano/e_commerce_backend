@@ -70,7 +70,23 @@ def add_product_form():
         conn = sqlite3.connect('products.db')
         cursor = conn.cursor()
         
-        # Insert product data
+        # CHECK FOR DUPLICATE PRODUCT NAME
+        cursor.execute('SELECT product_id, name FROM products WHERE LOWER(name) = LOWER(?)', (data['name'],))
+        existing_product = cursor.fetchone()
+        
+        if existing_product:
+            conn.close()
+            return jsonify({
+                'error': f'Product with name "{data["name"]}" already exists',
+                'status': 'duplicate_product',
+                'existing_product': {
+                    'product_id': existing_product[0],
+                    'name': existing_product[1]
+                },
+                'message': 'Product name must be unique. Please choose a different name or update the existing product.'
+            }), 409  # 409 Conflict status code
+        
+        # Insert product data if no duplicate found
         cursor.execute('''
             INSERT INTO products (
                 name, price, stock, incoming, category_type, category_name,

@@ -1,140 +1,295 @@
-from flask import request, jsonify, Blueprint
+from flask import Blueprint, request, jsonify
 import sqlite3
-from modules.e_commerce.token_required_for_seller import token_required
-from modules.e_commerce.init_products_db import init_products_db
-from modules.e_commerce.get_next_product_id import get_next_product_id
+import os
+from modules.e_commerce.authentication_decorator import token_required
+from modules.e_commerce.validation import validate_product_data
+from modules.e_commerce.init_db import init_db
 
-# Configuration
-PRODUCTS_DATABASE = 'products.db'
+# Create blueprint
+products_bp = Blueprint('products', __name__)
 
-products_api = Blueprint('products_api', __name__)
 
-@products_api.route('/auth/add/products', methods=['POST'])
+# FIXED: Changed route to match what you're calling in Bruno
+@products_bp.route('/add/products/form', methods=['POST'])
 @token_required
-def add_product(current_user_id, current_username):
-    """Add a new product to the database"""
+def add_product_form():
+    """Add a new product using form data"""
     try:
-        data = request.get_json()
+        # Get form data
+        data = {}
         
-        # Validate required fields
-        required_fields = ['product_name', 'price', 'discount', 'rating', 'shipping', 'brand', 'selling']
-        missing_fields = [field for field in required_fields if field not in data or data[field] is None]
+        # Required fields
+        required_fields = ['name', 'price', 'stock', 'category_type', 'category_name']
+        for field in required_fields:
+            value = request.form.get(field)
+            if value is not None:
+                data[field] = value.strip()
         
-        if missing_fields:
+        # Optional fields
+        optional_fields = ['incoming', 'sub_category', 'brand', 'description', 
+                          'specifications', 'delivery_charges', 'delivery_day', 'discounts']
+        for field in optional_fields:
+            value = request.form.get(field)
+            if value is not None and value.strip():
+                data[field] = value.strip()
+        
+        # Convert numeric fields
+        numeric_conversions = {
+            'price': float,
+            'stock': int,
+            'incoming': int,
+            'delivery_charges': float,
+            'delivery_day': int,
+            'discounts': float
+        }
+        
+        for field, converter in numeric_conversions.items():
+            if field in data and data[field]:
+                try:
+                    data[field] = converter(data[field])
+                except ValueError:
+                    return jsonify({
+                        'error': f'Invalid numeric value for {field}: {data[field]}',
+                        'status': 'validation_error'
+                    }), 400
+        
+        # Validate the data
+        is_valid, message = validate_product_data(data)
+        if not is_valid:
             return jsonify({
-                'error': f'Missing required fields: {", ".join(missing_fields)}'
+                'error': message,
+                'status': 'validation_error',
+                'received_data': data
             }), 400
         
-        # Validate data types and values
-        try:
-            price = float(data['price'])
-            discount = float(data['discount'])
-            rating = float(data['rating'])
-            selling = int(data['selling'])
-            
-            if price < 0:
-                return jsonify({'error': 'Price must be non-negative'}), 400
-            if discount < 0 or discount > 100:
-                return jsonify({'error': 'Discount must be between 0 and 100'}), 400
-            if rating < 0 or rating > 5:
-                return jsonify({'error': 'Rating must be between 0 and 5'}), 400
-            if selling < 0:
-                return jsonify({'error': 'Selling count must be non-negative'}), 400
-                
-        except (ValueError, TypeError):
-            return jsonify({'error': 'Invalid data types for numeric fields'}), 400
+        # Initialize database if it doesn't exist
+        if not os.path.exists('products.db'):
+            init_db()
         
-        product_name = data['product_name'].strip()
-        shipping = data['shipping'].strip()
-        brand = data['brand'].strip()
-        
-        # Validate string fields
-        if not product_name or len(product_name) > 255:
-            return jsonify({'error': 'Product name must be 1-255 characters'}), 400
-        if not brand or len(brand) > 100:
-            return jsonify({'error': 'Brand must be 1-100 characters'}), 400
-        if not shipping or len(shipping) > 100:
-            return jsonify({'error': 'Shipping info must be 1-100 characters'}), 400
-        
-        # Generate new product ID
-        product_id = get_next_product_id()
-        
-        # Insert into database
-        conn = sqlite3.connect(PRODUCTS_DATABASE)
+        # Connect to database
+        conn = sqlite3.connect('products.db')
         cursor = conn.cursor()
         
+        # Insert product data
         cursor.execute('''
             INSERT INTO products (
-                product_id, product_name, price, discount, rating, 
-                shipping, brand, selling, created_by
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                name, price, stock, incoming, category_type, category_name,
+                sub_category, brand, description, specifications,
+                delivery_charges, delivery_day, discounts
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ''', (
-            product_id, product_name, price, discount, rating,
-            shipping, brand, selling, current_user_id
+            data['name'],
+            data['price'],
+            data['stock'],
+            data.get('incoming', 0),
+            data['category_type'],
+            data['category_name'],
+            data.get('sub_category'),
+            data.get('brand'),
+            data.get('description'),
+            data.get('specifications'),
+            data.get('delivery_charges', 0.0),
+            data.get('delivery_day', 1),
+            data.get('discounts', 0.0)
         ))
         
+        # Get the inserted product ID
+        product_id = cursor.lastrowid
+        
+        # Commit and close connection
         conn.commit()
         conn.close()
         
         return jsonify({
-            'message': 'Product added successfully!',
+            'message': 'Product added successfully',
+            'status': 'success',
             'product_id': product_id,
-            'product_name': product_name,
-            'price': price,
-            'discount': discount,
-            'rating': rating,
-            'shipping': shipping,
-            'brand': brand,
-            'selling': selling,
-            'created_by': current_user_id,
-            'created_by_username': current_username
+            'data': {
+                'product_id': product_id,
+                'name': data['name'],
+                'price': data['price'],
+                'stock': data['stock'],
+                'category_type': data['category_type'],
+                'category_name': data['category_name']
+            }
         }), 201
         
-    except sqlite3.IntegrityError as e:
-        return jsonify({'error': 'Database constraint error'}), 400
+    except sqlite3.Error as e:
+        return jsonify({
+            'error': f'Database error: {str(e)}',
+            'status': 'database_error'
+        }), 500
+    
     except Exception as e:
-        print(f"Add product error: {e}")
-        return jsonify({'error': 'An error occurred while adding the product'}), 500
+        return jsonify({
+            'error': f'Internal server error: {str(e)}',
+            'status': 'internal_error'
+        }), 500
 
-@products_api.route('/products/<product_id>', methods=['GET'])
+# Get all products endpoint
+@products_bp.route('/products', methods=['GET'])
 @token_required
-def get_product(current_user_id, current_username, product_id):
-    """Get a specific product by ID (bonus endpoint)"""
+def get_all_products():
+    """Get all products from the database with optional filtering"""
     try:
-        conn = sqlite3.connect(PRODUCTS_DATABASE)
+        conn = sqlite3.connect('products.db')
+        conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         
-        cursor.execute('''
-            SELECT product_id, product_name, price, discount, rating,
-                   shipping, brand, selling, created_at, updated_at
-            FROM products WHERE product_id = ?
-        ''', (product_id,))
+        # Get query parameters for filtering
+        category_type = request.args.get('category_type')
+        category_name = request.args.get('category_name')
+        brand = request.args.get('brand')
+        min_price = request.args.get('min_price')
+        max_price = request.args.get('max_price')
+        in_stock_only = request.args.get('in_stock_only', 'false').lower() == 'true'
         
-        result = cursor.fetchone()
+        # Build query with filters
+        query = 'SELECT * FROM products WHERE 1=1'
+        params = []
+        
+        if category_type:
+            query += ' AND category_type = ?'
+            params.append(category_type)
+        
+        if category_name:
+            query += ' AND category_name = ?'
+            params.append(category_name)
+        
+        if brand:
+            query += ' AND brand = ?'
+            params.append(brand)
+        
+        if min_price:
+            query += ' AND price >= ?'
+            params.append(float(min_price))
+        
+        if max_price:
+            query += ' AND price <= ?'
+            params.append(float(max_price))
+        
+        if in_stock_only:
+            query += ' AND stock > 0'
+        
+        query += ' ORDER BY created_at DESC'
+        
+        cursor.execute(query, params)
+        products = cursor.fetchall()
+        
         conn.close()
         
-        if not result:
-            return jsonify({'error': 'Product not found'}), 404
+        # Convert to list of dictionaries
+        products_list = []
+        for product in products:
+            products_list.append({
+                'product_id': product['product_id'],
+                'name': product['name'],
+                'price': product['price'],
+                'stock': product['stock'],
+                'incoming': product['incoming'],
+                'category_type': product['category_type'],
+                'category_name': product['category_name'],
+                'sub_category': product['sub_category'],
+                'brand': product['brand'],
+                'description': product['description'],
+                'specifications': product['specifications'],
+                'delivery_charges': product['delivery_charges'],
+                'delivery_day': product['delivery_day'],
+                'discounts': product['discounts'],
+                'created_at': product['created_at']
+            })
         
-        product = {
-            'product_id': result[0],
-            'product_name': result[1],
-            'price': result[2],
-            'discount': result[3],
-            'rating': result[4],
-            'shipping': result[5],
-            'brand': result[6],
-            'selling': result[7],
-            'created_at': result[8],
-            'updated_at': result[9]
+        return jsonify({
+            'products': products_list,
+            'total_count': len(products_list),
+            'filters_applied': {
+                'category_type': category_type,
+                'category_name': category_name,
+                'brand': brand,
+                'min_price': min_price,
+                'max_price': max_price,
+                'in_stock_only': in_stock_only
+            },
+            'status': 'success'
+        }), 200
+        
+    except sqlite3.Error as e:
+        return jsonify({
+            'error': f'Database error: {str(e)}',
+            'status': 'database_error'
+        }), 500
+    
+    except Exception as e:
+        return jsonify({
+            'error': f'Internal server error: {str(e)}',
+            'status': 'internal_error'
+        }), 500
+
+# Get single product by ID
+@products_bp.route('/products/<int:product_id>', methods=['GET'])
+@token_required
+def get_product_by_id(product_id):
+    """Get a specific product by its ID"""
+    try:
+        conn = sqlite3.connect('products.db')
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        
+        cursor.execute('SELECT * FROM products WHERE product_id = ?', (product_id,))
+        product = cursor.fetchone()
+        
+        conn.close()
+        
+        if not product:
+            return jsonify({
+                'error': 'Product not found',
+                'status': 'not_found'
+            }), 404
+        
+        product_data = {
+            'product_id': product['product_id'],
+            'name': product['name'],
+            'price': product['price'],
+            'stock': product['stock'],
+            'incoming': product['incoming'],
+            'category_type': product['category_type'],
+            'category_name': product['category_name'],
+            'sub_category': product['sub_category'],
+            'brand': product['brand'],
+            'description': product['description'],
+            'specifications': product['specifications'],
+            'delivery_charges': product['delivery_charges'],
+            'delivery_day': product['delivery_day'],
+            'discounts': product['discounts'],
+            'created_at': product['created_at']
         }
         
-        return jsonify(product), 200
+        return jsonify({
+            'product': product_data,
+            'status': 'success'
+        }), 200
         
+    except sqlite3.Error as e:
+        return jsonify({
+            'error': f'Database error: {str(e)}',
+            'status': 'database_error'
+        }), 500
+    
     except Exception as e:
-        print(f"Get product error: {e}")
-        return jsonify({'error': 'An error occurred while fetching the product'}), 500
+        return jsonify({
+            'error': f'Internal server error: {str(e)}',
+            'status': 'internal_error'
+        }), 500
 
-# Initialize database when module is imported
-init_products_db()
+# Error handlers
+@products_bp.errorhandler(404)
+def not_found(error):
+    return jsonify({'error': 'Endpoint not found', 'status': 'not_found'}), 404
 
+@products_bp.errorhandler(405)
+def method_not_allowed(error):
+    return jsonify({'error': 'Method not allowed', 'status': 'method_not_allowed'}), 405
+
+@products_bp.errorhandler(500)
+def internal_error(error):
+    return jsonify({'error': 'Internal server error', 'status': 'internal_error'}), 500

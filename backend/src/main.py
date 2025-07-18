@@ -5,6 +5,7 @@ from apis.registration.seller.signup import signup_login_seller
 from apis.registration.buyer.signup import signup_login_buyer
 from apis.e_commerce.add_products import add_products_bp
 from apis.e_commerce.get_products import get_products_bp
+from apis.e_commerce.add_variants import product_variants_bp
 from modules.registration.seller.init_db import init_db_seller
 from modules.registration.buyer.init_db import init_db_buyer
 
@@ -19,6 +20,7 @@ def create_app():
     app.register_blueprint(signup_login_buyer)
     app.register_blueprint(add_products_bp)
     app.register_blueprint(get_products_bp)
+    app.register_blueprint(product_variants_bp)
     
     return app
 

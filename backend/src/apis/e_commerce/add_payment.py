@@ -2,14 +2,14 @@ from flask import jsonify, Blueprint, request
 import sqlite3
 from datetime import datetime, timezone
 from modules.e_commerce.token_required import token_required
-from modules.e_commerce.db_init_payment import create_payment_table_if_not_exists
+from modules.e_commerce.db_init_payment import create_payment_table_if_not_exists, get_payment_db_connection
 
 add_payment_buyer = Blueprint('add_payment_buyer', __name__)
 
 @add_payment_buyer.route('/add/payment', methods=['POST'])
 @token_required
 def add_payment(current_user):
-    """Add payment information for the authenticated user"""
+    """Add payment information for the authenticated user in payment.db"""
     try:
         data = request.get_json()
         
@@ -42,25 +42,28 @@ def add_payment(current_user):
             }), 400
         
         # Validate card number (basic validation - should be digits and appropriate length)
-        if not card_number.replace(' ', '').isdigit():
-            return jsonify({'error': 'Card number must contain only digits'}), 400
-        
-        card_number_clean = card_number.replace(' ', '')
-        if len(card_number_clean) < 13 or len(card_number_clean) > 19:
-            return jsonify({'error': 'Card number must be between 13 and 19 digits'}), 400
+        if payment_type.lower() != 'paypal':  # Skip card validation for PayPal
+            if not card_number.replace(' ', '').isdigit():
+                return jsonify({'error': 'Card number must contain only digits'}), 400
+            
+            card_number_clean = card_number.replace(' ', '')
+            if len(card_number_clean) < 13 or len(card_number_clean) > 19:
+                return jsonify({'error': 'Card number must be between 13 and 19 digits'}), 400
         
         # Validate expiry date format (MM/YY or MM/YYYY)
-        if '/' not in expiry_date:
-            return jsonify({'error': 'Expiry date must be in MM/YY or MM/YYYY format'}), 400
+        if payment_type.lower() != 'paypal':  # Skip expiry validation for PayPal
+            if '/' not in expiry_date:
+                return jsonify({'error': 'Expiry date must be in MM/YY or MM/YYYY format'}), 400
         
         # Validate CVV (3 or 4 digits)
-        if not cvv_number.isdigit() or len(cvv_number) not in [3, 4]:
-            return jsonify({'error': 'CVV must be 3 or 4 digits'}), 400
+        if payment_type.lower() != 'paypal':  # Skip CVV validation for PayPal
+            if not cvv_number.isdigit() or len(cvv_number) not in [3, 4]:
+                return jsonify({'error': 'CVV must be 3 or 4 digits'}), 400
         
-        # Connect to database and insert payment information
+        # Connect to payment.db database and insert payment information
         conn = create_payment_table_if_not_exists()
         if not conn:
-            return jsonify({'error': 'Database connection failed'}), 500
+            return jsonify({'error': 'Payment database connection failed'}), 500
         
         try:
             cursor = conn.cursor()
@@ -71,7 +74,7 @@ def add_payment(current_user):
                 conn.close()
                 return jsonify({'error': 'Payment ID already exists'}), 409
             
-            # Insert payment information
+            # Insert payment information into payment.db
             cursor.execute('''
                 INSERT INTO payments (payment_id, user_id, username, name, payment_type, 
                                     card_number, expiry_date, cvv_number)
@@ -83,16 +86,17 @@ def add_payment(current_user):
             conn.close()
             
             return jsonify({
-                'message': 'Payment information added successfully!',
+                'message': 'Payment information added successfully to payment.db!',
                 'payment_details': {
                     'payment_id': payment_id,
                     'user_id': user_id,
                     'username': username,
                     'name': name,
                     'payment_type': payment_type,
-                    'card_last_4': card_number[-4:],  # Only show last 4 digits for security
+                    'card_last_4': card_number[-4:] if payment_type.lower() != 'paypal' else 'N/A',
                     'expiry_date': expiry_date,
-                    'created_at': datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S')
+                    'created_at': datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%S'),
+                    'database': 'payment.db'
                 }
             }), 201
             
@@ -107,35 +111,17 @@ def add_payment(current_user):
         print(f"Add payment error: {e}")
         return jsonify({'error': 'An error occurred while adding payment information'}), 500
 
-# Optional: Get user's payment methods
 @add_payment_buyer.route('/get/payments', methods=['GET'])
 @token_required
 def get_user_payments(current_user):
-    """Get all payment methods for the authenticated user"""
+    """Get all payment methods for the authenticated user from payment.db"""
     try:
         user_id = current_user['user_id']
         
-        # Try different possible paths for the database
-        possible_paths = ['buyers.db', '../buyers.db', './buyers.db']
-        conn = None
-
-        for path in possible_paths:
-            try:
-                conn = sqlite3.connect(path)
-                cursor = conn.cursor()
-                # Test if the payments table exists
-                cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='payments'")
-                if cursor.fetchone():
-                    break
-                conn.close()
-                conn = None
-            except:
-                if conn:
-                    conn.close()
-                continue
-
+        # Connect to payment.db
+        conn = get_payment_db_connection()
         if not conn:
-            return jsonify({'error': 'Payments database not found'}), 404
+            return jsonify({'error': 'Payment database not found'}), 404
 
         cursor = conn.cursor()
         cursor.execute('''
@@ -151,22 +137,67 @@ def get_user_payments(current_user):
         # Format response with masked card numbers
         payment_list = []
         for payment in payments:
-            payment_list.append({
+            payment_info = {
                 'payment_id': payment[0],
                 'name': payment[1],
                 'payment_type': payment[2],
-                'card_last_4': payment[3][-4:],  # Only show last 4 digits
                 'expiry_date': payment[4],
                 'created_at': payment[5]
-            })
+            }
+            
+            # Handle different payment types
+            if payment[2].lower() == 'paypal':
+                payment_info['card_last_4'] = 'PayPal Account'
+            else:
+                payment_info['card_last_4'] = payment[3][-4:]  # Only show last 4 digits
+            
+            payment_list.append(payment_info)
         
         return jsonify({
             'user_id': user_id,
             'username': current_user['username'],
             'payments': payment_list,
-            'total_payments': len(payment_list)
+            'total_payments': len(payment_list),
+            'database': 'payment.db'
         }), 200
         
     except Exception as e:
         print(f"Get payments error: {e}")
         return jsonify({'error': 'An error occurred while retrieving payments'}), 500
+
+@add_payment_buyer.route('/delete/payment/<payment_id>', methods=['DELETE'])
+@token_required
+def delete_payment(current_user, payment_id):
+    """Delete a specific payment method for the authenticated user"""
+    try:
+        user_id = current_user['user_id']
+        
+        # Connect to payment.db
+        conn = get_payment_db_connection()
+        if not conn:
+            return jsonify({'error': 'Payment database not found'}), 404
+
+        cursor = conn.cursor()
+        
+        # Check if payment belongs to the user
+        cursor.execute("SELECT payment_id FROM payments WHERE payment_id = ? AND user_id = ?", 
+                      (payment_id, user_id))
+        if not cursor.fetchone():
+            conn.close()
+            return jsonify({'error': 'Payment not found or does not belong to user'}), 404
+        
+        # Delete the payment
+        cursor.execute("DELETE FROM payments WHERE payment_id = ? AND user_id = ?", 
+                      (payment_id, user_id))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({
+            'message': f'Payment {payment_id} deleted successfully!',
+            'database': 'payment.db'
+        }), 200
+        
+    except Exception as e:
+        print(f"Delete payment error: {e}")
+        return jsonify({'error': 'An error occurred while deleting payment'}), 500
